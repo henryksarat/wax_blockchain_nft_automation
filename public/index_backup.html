@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html>
+
+<script src='waxjs.js'></script>
+
+<title>waxjs demo</title>
+
+<body onload="checkTime()">
+
+<h1>Signing script</h1>
+
+
+<button id="login" onclick=login() >WAX Login</button><br><br>
+<button id="checktime" onclick=checkTime() >Refresh</button><br><br>
+
+<hr>
+<label>user:</label><input id="updater"><br><br>
+
+<p><input type="checkbox" id="autoclick" name="autoclick"> auto click</p><br><br>
+
+<p><input type="checkbox" id="autostake" name="autostake"> auto stake</p><br><br>
+
+<label style='font-weight: bold;'>Staked</label><p id="staked"></p><br><br>
+
+<label style='font-weight: bold;'>Wallet</label><p id="wallet"></p><br><br>
+
+<label style='font-weight: bold;'>Current Resources</label><p id="current_resources"></p><br><br>
+
+<label style='font-weight: bold;'>Current Inventory</label><p id="current_status"></p><br><br>
+<hr>
+<label>Transaction Results</label>
+<h2 id="response"></h2>
+
+<script>
+  const wax = new waxjs.WaxJS({
+    rpcEndpoint: 'https://wax.greymass.com',
+    tryAutoLogin: true
+  });
+  // const wax = new waxjs.WaxJS({
+  //   rpcEndpoint: 'http://wax-all.test:8888',
+  //   tryAutoLogin: true,
+  //   waxSigningURL: 'http://all-access.wax.test:8113',
+  //   waxAutoSigningURL: 'http://idm.wax.test:8113/v1/accounts/auto-accept/'
+  // });
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function checkTime() {
+    // login()
+    var parent = document.getElementById('current_status')
+    parent.textContent = ""
+    parent = document.getElementById('wallet')
+    parent.textContent = ""
+    parent = document.getElementById('staked')
+    parent.textContent = ""
+    parent = document.getElementById('current_resources')
+    parent.textContent = ""
+    execute_time('1099571862183')
+    execute_time('1099571897650')
+    execute_time('1099571897653')
+    execute_resources()
+    wallet()
+    staked()
+  }
+
+  async function wallet() {
+      const res = await wax.rpc.get_table_rows({
+        json: true,
+        code: 'farminggames',
+        scope: 'farminggames',
+        table: 'wallet',
+        lower_bound: 'gqgb.wam',
+        upper_bound: 'gqgb.wam'
+      });
+      
+      var sest = 0;
+      var cbit = 0;
+
+      for(i=0;i<res.rows[0].balances.length;i++) {
+        var the_row = res.rows[0].balances[i]
+
+        if(the_row.key == 'SEST') {
+          sest = the_row.value
+        } else if(the_row.key == 'CBIT') {
+          cbit = the_row.value
+        }
+      }
+
+      var parent = document.getElementById('wallet')
+      var text = document.createElement("p");
+      text.textContent = 'SEST=' + sest
+      var text2 = document.createElement("p");
+      text2.textContent = 'CBIT=' + cbit  
+      parent.appendChild(text)
+      parent.appendChild(text2)
+
+      stake_sest(sest)
+  }
+
+  async function staked() {
+      const res = await wax.rpc.get_table_rows({
+        json: true,
+        code: 'farmingstake',
+        scope: 'farmingstake',
+        table: 'staked',
+        lower_bound: 'gqgb.wam',
+        upper_bound: 'gqgb.wam'
+      });
+      
+
+      var amount = res.rows[0].amount
+
+      var parent = document.getElementById('staked')
+      var text = document.createElement("p");
+      text.textContent = amount
+      parent.appendChild(text)
+  }
+
+  async function execute_resources() {
+      const res = await wax.rpc.get_table_rows({
+        json: true,
+        code: 'farminggames',
+        scope: 'farminggames',
+        table: 'resources',
+        lower_bound: 'gqgb.wam',
+        upper_bound: 'gqgb.wam'
+      });
+      
+      var parent = document.getElementById('current_resources')
+      var text = document.createElement("p");
+      text.textContent = 'total food=' +  res.rows[0].food
+      parent.appendChild(text)
+  }
+
+  async function execute_time(asset_id) {
+      const res = await wax.rpc.get_table_rows({
+        json: true,
+        code: 'farminggames',
+        scope: 'farminggames',
+        table: 'animal',
+        lower_bound: 'gqgb.wam',
+        upper_bound: 'gqgb.wam',
+        key_type: "i64",
+        index_position: 2
+      });
+      
+      const rows = res.rows
+      
+      let last_harvest = ''
+      let template_id = ''
+      
+      for (i = 0; i < rows.length; i++) {
+        if(rows[i].asset_id == asset_id) {
+          last_harvest = rows[i].last_harvest
+          template_id = rows[i].template_id
+        }
+      }
+
+      
+
+
+      const res2 = await wax.rpc.get_table_rows({
+        json: true,
+        code: 'farminggames',
+        scope: 'farminggames',
+        table: 'confanimal',
+        limit: "1000"
+      });
+
+      let cooldown = ''
+      let label = ''
+      for (i = 0; i < res2.rows.length; i++) {
+        if(res2.rows[i].template_id == template_id) {
+          cooldown = res2.rows[i].cooldown
+          label = res2.rows[i].label
+        }
+      }
+      
+      var d = new Date(0)
+      d.setUTCSeconds(last_harvest)
+
+      let new_harvest_time = last_harvest+cooldown
+      
+      var next_d = new Date(0)
+      next_d.setUTCSeconds(new_harvest_time)
+      
+      var start = Date.now()
+      var ddd = next_d-start
+
+      var minutes = Math.floor(ddd / (1000*60));
+
+      var parent = document.getElementById('current_status')
+      var text = document.createElement("p");
+
+      if (minutes <= 0) {
+        let btn = document.createElement("button");
+        btn.id = asset_id
+        btn.innerHTML = "Harvest now:" + label;
+        btn.onclick = function () {
+          sign(asset_id)
+        };
+        parent.appendChild(btn)
+        const cb = document.querySelector('#autoclick');
+        if (cb.checked) {
+          sign(asset_id)
+        }
+      } else {
+        text.textContent = 'next harvest of ' + label +' in ' + minutes + ' minutes'
+        parent.appendChild(text)
+      }
+  }
+
+  async function login() {
+    try {
+      const userAccount = await wax.login();
+      document.getElementById('updater').value = userAccount;
+      await getCurrentMessage();
+    } catch(e) {
+      document.getElementById('response').append(e.message);
+    }
+  }
+
+  async function more_food() {
+    const account = "gqgb.wam"
+    try {
+      const result = await wax.api.transact({
+          actions: [{
+            account: 'farminggames',
+            name: 'refillfood',
+            authorization: [{
+              actor: wax.userAccount,
+              permission: 'active',
+            }],
+            data: {
+              account,
+            },
+          }]
+        }, {
+          blocksBehind: 3,
+          expireSeconds: 30
+        });
+    } catch(e) {
+      document.getElementById('response').append(e.message);
+    }
+
+  }
+
+  async function sign(asset_id) {
+    if(!wax.api) {
+      return document.getElementById('response').append('* Login first *');
+    }
+
+    const updater = document.getElementById('updater').value;
+    
+
+    try {
+   
+      
+      const owner = "mqdyy.wam"
+      const ram_payer = "mqdyy.wam"
+      const symbol = "4,TACO"
+
+      // const account = "mqdyy.wam"
+      const nonce = "737433912693"
+      const key = "22702015344"
+
+
+
+    const account = "gqgb.wam"
+
+    const result = await wax.api.transact({
+          actions: [{
+            account: 'farminggames',
+            name: 'harvestanim',
+            authorization: [{
+              actor: wax.userAccount,
+              permission: 'active',
+            }],
+            data: {
+              account,
+              asset_id,
+            },
+          }]
+        }, {
+          blocksBehind: 3,
+          expireSeconds: 30
+        });
+
+      document.getElementById('response').append(JSON.stringify(result));
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await getCurrentMessage();
+      checkTime()
+      await sleep(2000);
+    } catch(e) {
+      document.getElementById('response').append(e.message);
+      if(e.message.includes('Not enough food to harvest')) {
+        more_food()
+      }
+    }
+
+  }
+
+  async function stake_sest(amount) {
+    // if(!wax.api) {
+    //   return document.getElementById('response').append('* Login first *');
+    // }
+
+    const value = Math.trunc(amount/10000) + ".0000 SEST"
+    
+    const cb = document.querySelector('#autostake')
+    if (cb.checked) {
+    
+    
+
+      try {
+        const account = wax.userAccount
+        const result = await wax.api.transact({
+            actions: [{
+              account: 'farminggames',
+              name: 'stakesest',
+              authorization: [{
+                actor: wax.userAccount,
+                permission: 'active',
+              }],
+              data: {
+                account,
+                value,
+              },
+            }]
+          }, {
+            blocksBehind: 3,
+            expireSeconds: 30
+          });
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await getCurrentMessage();
+
+        await sleep(2000);
+
+        wallet()
+        staked()
+      } catch(e) {
+        document.getElementById('response').append(e.message);
+      }
+    }
+  }
+
+  async function getCurrentMessage() {
+    const res = await wax.rpc.get_table_rows({
+      json: true,
+      code: 'test.wax',
+      scope: 'test.wax',
+      table: 'messages',
+      lower_bound: wax.userAccount,
+      upper_bound: wax.userAccount,
+    });
+
+    const message = res.rows[0] ? res.rows[0].message : `<No message is set for ${wax.userAccount}>`;
+    document.getElementById('current').textContent = message;
+    document.getElementById('current').textContent = 'hi';
+
+  }
+
+  // set a random value to the initial message value
+
+</script>
+<div id="root"></div>
+</body>
+</html>
+
+
+
+
+
