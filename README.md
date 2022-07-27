@@ -15,6 +15,12 @@ TODO:
 Support of login via OAuth to your Wax Account
 ![This is an image](https://github.com/henryksarat/wax_blockchain_nft_automation/blob/main/assets/wax_automation_not_logged_in.png)
 
+You are able to use any of the available OAuth providers:
+![This is an image](https://github.com/henryksarat/wax_blockchain_nft_automation/blob/main/assets/wax_automation_any.png)
+
+You simply have to accept the transaction for the app to have permission (*Nothing is stored on the backend and is only on the browser side with the Wax OAuth Javascript Plugin*):
+![This is an image](https://github.com/henryksarat/wax_blockchain_nft_automation/blob/main/assets/wax_automation_login_approve.png)
+
 After Login Automation for auto-harvesting of NFTs and auto-staking, example here is for Farmingtales:
 ![This is an image](https://github.com/henryksarat/wax_blockchain_nft_automation/blob/main/assets/wax_automation_before.png)
 
